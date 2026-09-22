@@ -1,4 +1,4 @@
-````markdown
+```markdown
 # Human-Pose-Fitness-Count
 
 ## 项目概述
@@ -35,13 +35,6 @@ flowchart TD
     I --> J
     J --> K[标注视频]
     J --> L[CSV 统计表]
-
-    style A fill:#e1f5ff,stroke:#333
-    style B fill:#fff4e1,stroke:#333
-    style C fill:#e1ffe1,stroke:#333
-    style D fill:#ffe1f5,stroke:#333
-    style E fill:#f5e1ff,stroke:#333
-    style J fill:#ffe1e1,stroke:#333
 ```
 
 处理流程：
@@ -65,12 +58,12 @@ flowchart TD
         A
          \
           \
-           B ────── C
+           B ------ C
 
         BA = A - B
         BC = C - B
 
-        ∠ABC = arccos( (BA · BC) / (|BA| · |BC|) )
+        angle ABC = arccos( (BA . BC) / (|BA| * |BC|) )
 ```
 
 实现：
@@ -92,7 +85,7 @@ def calculate_angle(a, b, c):
 设计要点：
 
 - 为什么不用 atan2 差值：atan2 差值在跨象限时会发生 2π 翻转，导致角度值剧烈抖动
-- 为什么用点积加 acos：点积法天然抗象限翻转，输出稳定在 0° 到 180° 区间
+- 为什么用点积加 acos：点积法天然抗象限翻转，输出稳定在 0 到 180 度区间
 - 数值裁剪：np.clip 处理浮点误差导致的超出 -1 到 1 范围的边界情况
 
 ### 2. 姿态粗分类（classify_pose）
@@ -103,8 +96,8 @@ def calculate_angle(a, b, c):
         torso_vec = H - S
         vertical_vec = (0, 1)
 
-        torso_vert_angle = arccos( (torso_vec · vertical_vec)
-                                   / (|torso_vec| · |vertical_vec|) )
+        torso_vert_angle = arccos( (torso_vec . vertical_vec)
+                                   / (|torso_vec| * |vertical_vec|) )
 ```
 
 分类规则：
@@ -196,19 +189,19 @@ class RepCounter:
 
 | 参数 | 含义 | 深蹲 | 俯卧撑 |
 |---|---|---|---|
-| down_th | 进入"下"相位阈值 | 105° | 115° |
-| up_th | 进入"上"相位阈值 | 150° | 150° |
+| down_th | 进入下相位阈值 | 105 | 115 |
+| up_th | 进入上相位阈值 | 150 | 150 |
 | min_frames | 连续帧确认数 | 4 | 4 |
 
 设计要点：
 
 - 帧级防抖：连续 N 帧满足条件才切换，抑制关键点抖动
-- 相位分离：必须有"下到上"的完整周期才计数，避免单帧误触
+- 相位分离：必须有下到上的完整周期才计数，避免单帧误触
 - 阈值可配置：不同动作使用不同阈值
 
 ### 5. 滑动窗口稳定性判据
 
-问题分析：俯卧撑撑起的瞬间肘角约 170°，与直臂平板支撑几乎一致，单帧角度无法区分。
+问题分析：俯卧撑撑起的瞬间肘角约 170 度，与直臂平板支撑几乎一致，单帧角度无法区分。
 
 解决方案：使用肘角滑动窗口（约 1 秒）的极差作为稳定性判据。
 
@@ -227,11 +220,9 @@ from collections import deque
 
 elbow_history = deque(maxlen=25)   # 约 1 秒 @ 25fps
 
-# 每帧更新
 if elbow is not None:
     elbow_history.append(elbow)
 
-# 稳定性判定
 if len(elbow_history) >= 12:
     elbow_range = max(elbow_history) - min(elbow_history)
     is_stable = elbow_range < PLANK_STABILITY_TH
@@ -243,15 +234,15 @@ else:
 
 | 动作 | 肘角范围 | 窗口极差 | 判定 |
 |---|---|---|---|
-| 前臂平板 | 83° 到 91° | 约 8° | Plank |
-| 俯卧撑 | 101° 到 171° | 约 70° | Pushup |
-| 直臂平板 | 165° 到 175° | 约 10° | Plank |
+| 前臂平板 | 83 到 91 | 约 8 | Plank |
+| 俯卧撑 | 101 到 171 | 约 70 | Pushup |
+| 直臂平板 | 165 到 175 | 约 10 | Plank |
 
 参数说明：
 
 | 参数 | 默认值 | 说明 |
 |---|---|---|
-| PLANK_STABILITY_WIN | 25 | 滑动窗口帧数（约 1 秒 @ 25fps）|
+| PLANK_STABILITY_WIN | 25 | 滑动窗口帧数，约 1 秒 |
 | PLANK_STABILITY_TH | 30 | 窗口内肘角极差阈值 |
 | PLANK_MIN_FRAMES | 25 | 连续稳定帧数确认 |
 
@@ -284,7 +275,7 @@ class PlankTimer:
 
 - 用帧号而非时间戳：避免某些编码格式下 cv2.CAP_PROP_POS_MSEC 返回 0 的问题
 - 连续帧确认：至少 N 帧满足才认为进入平板状态，过滤噪声
-- 支持两种统计：单次最长（max）或累计时长（total）
+- 支持两种统计：单次最长或累计时长
 
 ### 7. Flask Web 端（app.py）
 
@@ -311,7 +302,7 @@ class PlankTimer:
 
 - use_reloader=False：避免 OpenCV 写入临时文件触发 Flask 自动重启
 - CSV 追加模式：每次上传追加一行，读取最后一行作为本次结果
-- 静态目录分离：static/uploads/ 存上传视频，output/ 存标注结果
+- 静态目录分离：static/uploads 存上传视频，output 存标注结果
 
 ---
 
@@ -323,7 +314,7 @@ class PlankTimer:
 | SQUAT_UP_TH | 150 | 深蹲：膝角高于此值视为站起 |
 | PUSHUP_DOWN_TH | 115 | 俯卧撑：肘角低于此值视为下压 |
 | PUSHUP_UP_TH | 150 | 俯卧撑：肘角高于此值视为撑起 |
-| PLANK_HIP_MIN | 130 | 平板：肩-髋-膝角度最小值 |
+| PLANK_HIP_MIN | 130 | 平板：肩髋膝角度最小值 |
 | PLANK_STABILITY_WIN | 25 | 平板：滑动窗口帧数 |
 | PLANK_STABILITY_TH | 30 | 平板：窗口内肘角极差阈值 |
 | PLANK_MIN_FRAMES | 25 | 平板：连续稳定帧数确认 |
@@ -336,7 +327,7 @@ class PlankTimer:
 
 | 指标 | 计算方式 | 说明 |
 |---|---|---|
-| 计数准确率 | 1 减去 预测次数与真实次数差值绝对值除以真实次数 | 越接近 1 越好 |
+| 计数准确率 | 1 减去预测次数与真实次数差值绝对值除以真实次数 | 越接近 1 越好 |
 | 平板时间误差 | 系统计时与真实保持时长差值绝对值除以真实时长 | 越接近 0 越好 |
 | 误触发率 | 误判视频数除以总视频数 | 越低越好 |
 | 漏检率 | 未识别次数除以实际次数 | 越低越好 |
@@ -351,14 +342,14 @@ class PlankTimer:
 
 | 视频类型 | 数量 | 期望结果 | 系统识别 | 准确率 |
 |---|---|---|---|---|
-| idle（静止） | 3 | 全 0 | 0 / 0 / 0 | 100% |
-| plank（平板） | 3 | 6 到 10 秒 | 6.2 / 9.1 / 9.1 秒 | 约 95% |
-| pushup（俯卧撑） | 3 | 3 到 5 次 | 2 / 4 / 4 | 约 85% |
-| squat（深蹲） | 3 | 2 到 10 次 | 2 / 8 / 2 | 约 90% |
+| idle 静止 | 3 | 全 0 | 0 / 0 / 0 | 100% |
+| plank 平板 | 3 | 6 到 10 秒 | 6.2 / 9.1 / 9.1 秒 | 约 95% |
+| pushup 俯卧撑 | 3 | 3 到 5 次 | 2 / 4 / 4 | 约 85% |
+| squat 深蹲 | 3 | 2 到 10 次 | 2 / 8 / 2 | 约 90% |
 
 ### 混淆矩阵
 
-| 真实 \ 预测 | Squat | Pushup | Plank | 无动作 |
+| 真实 预测 | Squat | Pushup | Plank | 无动作 |
 |---|---|---|---|---|
 | Squat | 3 | 0 | 0 | 0 |
 | Pushup | 0 | 3 | 0 | 0 |
@@ -375,7 +366,7 @@ class PlankTimer:
 |---|---|
 | 模型体积 | 约 10 MB |
 | CPU 单帧推理 | 约 30 毫秒 |
-| 处理速度 | 约 30 FPS（1080p）|
+| 处理速度 | 约 30 FPS，1080p |
 | 批量处理 12 个视频总耗时 | 约 2 分钟 |
 | 内存占用 | 约 300 MB |
 
@@ -390,7 +381,7 @@ class PlankTimer:
 | 模块 | 本项目 | 基础方案 |
 |---|---|---|
 | 姿态分类 | 躯干夹角加中间地带 unknown | 简单 y 差阈值 |
-| 俯卧撑/平板区分 | 滑动窗口稳定性判据 | 单帧肘角阈值 |
+| 俯卧撑平板区分 | 滑动窗口稳定性判据 | 单帧肘角阈值 |
 | 状态机防抖 | 连续 N 帧确认 | 单帧切换 |
 | 平板计时 | 帧号计算加连续帧确认 | POS_MSEC 时间戳 |
 | 关键点容错 | 左右平均加可见性过滤 | 只用左侧关键点 |
@@ -400,9 +391,9 @@ class PlankTimer:
 
 | 方案 | 模型体积 | CPU 推理速度 | 关键点数量 | 部署难度 |
 |---|---|---|---|---|
-| OpenPose | 约 200 MB | 约 3 FPS | 25 | 高（需 GPU）|
+| OpenPose | 约 200 MB | 约 3 FPS | 25 | 高，需 GPU |
 | HRNet | 约 100 MB | 约 5 FPS | 17 | 中 |
-| MediaPipe（本方案） | 约 10 MB | 约 30 FPS | 33 | 低（CPU 即可）|
+| MediaPipe 本方案 | 约 10 MB | 约 30 FPS | 33 | 低，CPU 即可 |
 
 选型理由：MediaPipe 模型体积小 10 到 20 倍，CPU 推理速度提升 6 到 10 倍，适合边缘部署和实时应用。
 
@@ -417,30 +408,30 @@ Human-Pose-Fitness-Count/
 ├── .gitignore
 ├── LICENSE
 │
-├── app.py                          # Flask Web 应用入口
-├── video_new.py                    # 批量处理主程序
-├── image_pose.py                   # 单张图片关键点检测
-├── check_video.py                  # 视频完整性检查工具
-├── debug_angles.py                 # 关节角度调试脚本
+├── app.py
+├── video_new.py
+├── image_pose.py
+├── check_video.py
+├── debug_angles.py
 │
 ├── utils/
 │   ├── __init__.py
-│   └── pose_utils.py               # 核心工具：角度 / 特征 / 状态机
+│   └── pose_utils.py
 │
 ├── templates/
-│   └── index.html                  # Web 前端页面
+│   └── index.html
 │
-├── archive/                        # 早期迭代版本
+├── archive/
 │
-├── docs/                           # README 展示图片
+├── docs/
 │   ├── web_upload.png
 │   ├── web_result.png
 │   ├── terminal_output.png
 │   └── result_csv.png
 │
-├── images/                         # 测试图片
-├── videos/                         # 测试视频
-└── output/                         # 处理结果
+├── images/
+├── videos/
+└── output/
     └── result.csv
 ```
 
@@ -460,7 +451,7 @@ pip install -r requirements.txt
 python video_new.py
 ```
 
-自动遍历 videos/ 目录下所有 mp4 文件，结果输出到 output/。
+自动遍历 videos 目录下所有 mp4 文件，结果输出到 output 目录。
 
 ### Web 端在线推理
 
@@ -484,15 +475,15 @@ python debug_angles.py ./videos/squat_01.mp4
 
 ### 1. 为什么用滑动窗口而非单帧角度区分俯卧撑与平板
 
-踩坑经历：初期用单帧肘角大于 140° 判为平板，导致俯卧撑撑起的瞬间被误判（撑起时肘角也接近 170°）。
+踩坑经历：初期用单帧肘角大于 140 度判为平板，导致俯卧撑撑起的瞬间被误判，撑起时肘角也接近 170 度。
 
-解决方案：改用肘角滑动窗口极差，让"稳定性"成为核心判据。平板支撑的肘角在窗口内极差小于 10°，而俯卧撑的肘角在窗口内极差大于 60°。
+解决方案：改用肘角滑动窗口极差，让稳定性成为核心判据。平板支撑的肘角在窗口内极差小于 10 度，而俯卧撑的肘角在窗口内极差大于 60 度。
 
 效果：两类动作完全区分，误触发率降为 0。
 
 ### 2. 为什么必须先做姿态粗分类
 
-深蹲（站立）与俯卧撑（俯卧）的关节角度特征完全不同，直接判断容易混淆。通过躯干向量与竖直方向夹角先粗分类，可显著降低跨动作误触发。
+深蹲站立与俯卧撑俯卧的关节角度特征完全不同，直接判断容易混淆。通过躯干向量与竖直方向夹角先粗分类，可显著降低跨动作误触发。
 
 关键设计：中间地带返回 unknown，宁可不判，也不误判。
 
@@ -500,7 +491,7 @@ python debug_angles.py ./videos/squat_01.mp4
 
 调试发现：正面拍摄的平板支撑视频完全无法识别。
 
-原因分析：2D 投影下，肩-髋-踝在图像上不是一条直线（从正面看是上下分布的），躯干角度失真，torso_vert_angle 落在 30° 到 50° 的灰色地带。
+原因分析：2D 投影下，肩髋踝在图像上不是一条直线，从正面看是上下分布的，躯干角度失真，torso_vert_angle 落在 30 到 50 度的灰色地带。
 
 最终方案：所有测试视频采用横屏侧拍加全身入镜，关键点可见性从 0% 提升到 95% 以上。
 
@@ -513,33 +504,33 @@ python debug_angles.py ./videos/squat_01.mp4
 | 局限 | 原因 | 改进方向 |
 |---|---|---|
 | 仅支持单人 | MediaPipe 只输出 1 组关键点 | 多人检测加关键点跟踪 |
-| 依赖侧面拍摄 | 2D 姿态估计固有缺陷 | 3D 姿态估计（BlazePose GHUM）|
-| 平板时间偏短 | 稳定判定的头尾帧被过滤 | 引入时序平滑（卡尔曼滤波）|
-| 严重遮挡下失效 | 关键点缺失 | 关键点补全（GCN / 扩散模型）|
-| 动作类型有限 | 硬编码规则 | 引入时序模型（LSTM / Transformer）|
+| 依赖侧面拍摄 | 2D 姿态估计固有缺陷 | 3D 姿态估计 BlazePose GHUM |
+| 平板时间偏短 | 稳定判定的头尾帧被过滤 | 引入时序平滑 卡尔曼滤波 |
+| 严重遮挡下失效 | 关键点缺失 | 关键点补全 GCN 扩散模型 |
+| 动作类型有限 | 硬编码规则 | 引入时序模型 LSTM Transformer |
 
 ---
 
 ## 未来工作
 
-1. 多动作扩展：基于骨架序列训练轻量级时序分类器，支持更多动作类型（弓步、引体向上等）
-2. 多人场景：结合目标跟踪（ByteTrack / DeepSORT）实现多人独立计数
+1. 多动作扩展：基于骨架序列训练轻量级时序分类器，支持更多动作类型，如弓步、引体向上等
+2. 多人场景：结合目标跟踪 ByteTrack 或 DeepSORT 实现多人独立计数
 3. 3D 姿态估计：使用 MediaPipe Holistic 或 BlazePose GHUM 获取 3D 关键点，解决遮挡与视角问题
 4. 实时部署：结合 ONNX Runtime 或 TensorRT 进一步加速，支持移动端实时推理
-5. 动作质量评估：不仅计数，还评估动作标准度（如深蹲深度、俯卧撑肘角范围）
+5. 动作质量评估：不仅计数，还评估动作标准度，如深蹲深度、俯卧撑肘角范围
 
 ---
 
 ## 参考文献
 
-1. Lugaresi C, Tang J, Nash H, et al. MediaPipe: A Framework for Building Perception Pipelines[J]. arXiv preprint arXiv:1906.08172, 2019.
-2. Bazarevsky V, Grishchenko I, Raveendran K, et al. BlazePose: On-device Real-time Body Pose Tracking[J]. arXiv preprint arXiv:2006.10204, 2020.
-3. Cao Z, Hidalgo G, Simon T, et al. OpenPose: Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields[J]. IEEE TPAMI, 2019.
-4. Sun K, Xiao B, Liu D, et al. Deep High-Resolution Representation Learning for Visual Recognition[J]. IEEE TPAMI, 2019.
+1. Lugaresi C, Tang J, Nash H, et al. MediaPipe: A Framework for Building Perception Pipelines. arXiv preprint arXiv:1906.08172, 2019.
+2. Bazarevsky V, Grishchenko I, Raveendran K, et al. BlazePose: On-device Real-time Body Pose Tracking. arXiv preprint arXiv:2006.10204, 2020.
+3. Cao Z, Hidalgo G, Simon T, et al. OpenPose: Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields. IEEE TPAMI, 2019.
+4. Sun K, Xiao B, Liu D, et al. Deep High-Resolution Representation Learning for Visual Recognition. IEEE TPAMI, 2019.
 
 ---
 
 ## License
 
 MIT
-````
+```
