@@ -1,4 +1,4 @@
-# Human-Pose-Fitness-Count
+# Fitness Action Recognition and Counting
 
 ## 项目概述
 
