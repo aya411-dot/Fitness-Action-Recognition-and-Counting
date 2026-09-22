@@ -431,7 +431,7 @@ class PlankTimer:
 ## 项目文件结构
 
 ```text
-Human-Pose-Fitness-Count/
+Fitness-Action-Recognition-and-Counting/
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
