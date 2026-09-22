@@ -1,0 +1,30 @@
+# 视频文件
+*.mp4
+*.avi
+*.mov
+
+# python缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 私人文档
+*.docx
+
+# 备份文件
+*.bak
+
+# IDE配置
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Flask 临时文件
+web_result.csv
+static/uploads/
+
+# 输出目录
+output/out_*.mp4
+output/web_*.csv

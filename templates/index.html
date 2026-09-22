@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>人体姿态健身计数</title>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 40px auto; }
+    .result { margin: 20px 0; padding: 16px; background: #f0f8ff; border-radius: 8px; }
+    .result span { display: inline-block; margin-right: 20px; font-size: 18px; }
+    video { max-width: 100%; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>🏋️ 健身动作识别</h1>
+  <p>上传视频，自动识别深蹲 / 俯卧撑 / 平板支撑</p>
+  <input type="file" id="file" accept="video/mp4">
+  <button onclick="upload()">上传并识别</button>
+  <div id="status"></div>
+  <div id="result" class="result" style="display:none"></div>
+  <video id="player" controls style="display:none"></video>
+
+  <script>
+    async function upload() {
+      const file = document.getElementById('file').files[0];
+      if (!file) return alert('请选择视频');
+      const status = document.getElementById('status');
+      status.textContent = '⏳ 处理中，请稍候...';
+      const fd = new FormData();
+      fd.append('video', file);
+      const res = await fetch('/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      status.textContent = '✅ 处理完成';
+      const r = document.getElementById('result');
+      r.style.display = 'block';
+      r.innerHTML = `<span>深蹲: <b>${data.squat}</b></span>
+                     <span>俯卧撑: <b>${data.pushup}</b></span>
+                     <span>平板: <b>${data.plank}s</b></span>`;
+      const v = document.getElementById('player');
+      v.src = data.video_url;
+      v.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
